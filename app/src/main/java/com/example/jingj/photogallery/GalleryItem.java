@@ -11,7 +11,7 @@ public class GalleryItem {
     @SerializedName("id")
     private String mID;
 
-    @SerializedName("uel_s")
+    @SerializedName("url_s")
     private String mUrl;
 
     public String getmCaption() {

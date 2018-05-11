@@ -1,7 +1,11 @@
 package com.example.jingj.photogallery;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -11,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -25,10 +30,13 @@ public class PhotoGalleryFragment extends Fragment {
     private List<GalleryItem> mItems = new ArrayList<>();
     private int page = 1;
     private FetchItemTask fetchItemTask;
+    private ThumbnailDownload<PhotoHolder> mThumbnailDownload;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
     }
+
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -37,6 +45,21 @@ public class PhotoGalleryFragment extends Fragment {
         //启动AsyncTask，进而触发后台线程并调用doInBackGround()
         fetchItemTask = new FetchItemTask();
         fetchItemTask.execute(page);
+
+        Handler responseHandler = new Handler();
+        //mThumbnailDownload为HandlerThread线程
+        mThumbnailDownload = new ThumbnailDownload<>(responseHandler);
+        mThumbnailDownload.setmThumbnailDownloadListener(new ThumbnailDownload.ThumbnailDownloadListener<PhotoHolder>() {
+            @Override
+            public void onThumbnailDownloaded(PhotoHolder photoHolder, Bitmap bitmap) {
+                Drawable drawable = new BitmapDrawable(getResources(), bitmap);
+                photoHolder.bindDrawable(drawable);
+                Log.i(TAG, "Holder bind success");
+            }
+        });
+        mThumbnailDownload.start();
+        mThumbnailDownload.getLooper();
+        Log.i(TAG, "BackGround thread start");
     }
 
     @Nullable
@@ -69,6 +92,13 @@ public class PhotoGalleryFragment extends Fragment {
         return v;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mThumbnailDownload.clearQueue();
+        Log.i(TAG, "Background Thread destroyed");
+    }
+
     private void setupAdapter() {
         /**
          * Return true if the fragment is currently added to its activity.
@@ -90,14 +120,17 @@ public class PhotoGalleryFragment extends Fragment {
         @NonNull
         @Override
         public PhotoHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            TextView textView = new TextView(getActivity());
-            return new PhotoHolder(textView);
+            LayoutInflater inflater = LayoutInflater.from(getActivity());
+            View view = inflater.inflate(R.layout.list_item_gallery, parent, false);
+            return new PhotoHolder(view);
         }
 
         @Override
         public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
-            holder.bindGalleryItem(galleryItem);
+//            Drawable placeholder = getResources().getDrawable(R.drawable.bill_up_close);
+//            holder.bindDrawable(placeholder);
+            mThumbnailDownload.queueThumbnail(holder, galleryItem.getmUrl());
         }
 
         @Override
@@ -108,15 +141,15 @@ public class PhotoGalleryFragment extends Fragment {
 
     private class PhotoHolder extends RecyclerView.ViewHolder {
 
-        private TextView mTitleTextView;
+        private ImageView mItemImageView;
         public PhotoHolder(View itemView) {
             super(itemView);
 
-            mTitleTextView = (TextView) itemView;
+            mItemImageView = (ImageView) itemView;
         }
 
-        public void bindGalleryItem(GalleryItem item) {
-            mTitleTextView.setText(item.toString());
+        public void bindDrawable(Drawable drawable) {
+            mItemImageView.setImageDrawable(drawable);
         }
     }
 
