@@ -1,5 +1,6 @@
 package com.example.jingj.photogallery;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -11,14 +12,20 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,9 +49,9 @@ public class PhotoGalleryFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+        setHasOptionsMenu(true);
         //启动AsyncTask，进而触发后台线程并调用doInBackGround()
-        fetchItemTask = new FetchItemTask();
-        fetchItemTask.execute(page);
+        updateItems(page);
 
         Handler responseHandler = new Handler();
         //mThumbnailDownload为HandlerThread线程
@@ -78,9 +85,7 @@ public class PhotoGalleryFragment extends Fragment {
                 super.onScrollStateChanged(recyclerView, newState);
                 if (!mRecyclerView.canScrollVertically(1)) {
                     page = page + 1;
-                    fetchItemTask.cancel(false);
-                    fetchItemTask = new FetchItemTask();
-                    fetchItemTask.execute(page);
+                    updateItems(page);
                 }
             }
 
@@ -90,6 +95,64 @@ public class PhotoGalleryFragment extends Fragment {
             }
         });
         return v;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.fragment_photo_gallery, menu);
+        final MenuItem searchItem = menu.findItem(R.id.menu_item_search);
+        //从item中提取出来searchView
+        final SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                Log.d(TAG, "QueryTextSubmit: " + query);
+                QueryPreferences.setStoredQuery(getActivity(), query);
+
+                InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(getView().getWindowToken(), 0);
+                }
+                //第一次调用是为了清除SearchView中的数据
+                searchView.setIconified(true);
+                //第二次调用是为了设置searchView为图标
+                searchView.setIconified(true);
+                updateItems(page);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                Log.d(TAG, "QueryTextChange: " + newText);
+                return false;
+            }
+        });
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String query = QueryPreferences.getStoredQuery(getActivity());
+                searchView.setQuery(query, false);
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_item_clear:
+                QueryPreferences.setStoredQuery(getActivity(), null);
+                updateItems(page);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void updateItems(int page) {
+        String query = QueryPreferences.getStoredQuery(getActivity());
+        new FetchItemTask(query).execute(page);
     }
 
     @Override
@@ -156,9 +219,21 @@ public class PhotoGalleryFragment extends Fragment {
     //此类用来新建后台线程
     //第三个参数是doInBackGround的输出以及onPostExecute的输入
     private class FetchItemTask extends AsyncTask<Integer, Void, List<GalleryItem>> {
+
+        private String mQuery;
+
+        public FetchItemTask(String query) {
+            mQuery = query;
+        }
+
         @Override
         protected List<GalleryItem> doInBackground(Integer... voids) {
-            return new FlickerFetcher().fetchItems(voids[0]);
+
+            if (mQuery == null) {
+                return new FlickerFetcher().fetchRecentPhotos(voids[0]);
+            } else {
+                return new FlickerFetcher().searchPhotos(mQuery);
+            }
         }
 
         @Override
