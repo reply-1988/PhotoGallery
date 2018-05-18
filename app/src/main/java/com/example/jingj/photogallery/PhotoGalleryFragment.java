@@ -1,15 +1,22 @@
 package com.example.jingj.photogallery;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
@@ -136,6 +143,22 @@ public class PhotoGalleryFragment extends Fragment {
                 searchView.setQuery(query, false);
             }
         });
+
+        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            if (PollService.isServiceAlarmOn(getActivity())) {
+                toggleItem.setTitle(R.string.stop_polling);
+            } else {
+                toggleItem.setTitle(R.string.start_polling);
+            }
+        } else {
+            if (PollServiceHigh.isScheduled(getActivity())) {
+                toggleItem.setTitle(R.string.stop_polling);
+            } else {
+                toggleItem.setTitle(R.string.start_polling);
+            }
+        }
+
     }
 
     @Override
@@ -145,6 +168,19 @@ public class PhotoGalleryFragment extends Fragment {
                 QueryPreferences.setStoredQuery(getActivity(), null);
                 updateItems(page);
                 return true;
+            case R.id.menu_item_toggle_polling:
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                    boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
+                    Log.i(TAG, "点击了按钮" + shouldStartAlarm);
+                    PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
+                    getActivity().invalidateOptionsMenu();
+                    return true;
+                } else {
+                    PollServiceHigh.startService(getActivity());
+                    Log.i(TAG, "使用jobSchedule");
+                    getActivity().invalidateOptionsMenu();
+                    return true;
+                }
             default:
                 return super.onOptionsItemSelected(item);
         }
