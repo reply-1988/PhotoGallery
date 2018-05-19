@@ -1,5 +1,6 @@
 package com.example.jingj.photogallery;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.Notification;
@@ -28,6 +29,12 @@ public class PollService extends IntentService {
 
     //设置间隔为一分钟
     private static final long POLL_INTERVAL_MS = TimeUnit.MINUTES.toMillis(1);
+
+    public static final String ACTION_SHOW_NOTIFICATION = "com.jingj.android.photogallery.SHOW_NOTIFICATION";
+
+    public static final String PERM_PRIVATE = "com.example.jingj.photogallery.PRIVATE";
+    public static final String REQUEST_CODE = "REQUEST_CODE";
+    public static final String NOTIFICATION = "NOTIFICATION";
 
     public static Intent newIntent(Context context) {
         return new Intent(context, PollService.class);
@@ -66,11 +73,6 @@ public class PollService extends IntentService {
             Intent i = PhotoGalleryActivity.newIntent(this);
             PendingIntent ps = PendingIntent.getActivity(this, 0, i, 0);
 
-            //Android8.0之后要添加NotificationChannel
-            final NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            NotificationChannel channel = new NotificationChannel("test", "test", NotificationManager.IMPORTANCE_HIGH);
-            manager.createNotificationChannel(channel);
-
             Notification notification = new NotificationCompat.Builder(this, "test")
                     .setTicker(resources.getString(R.string.new_picture_title))
                     .setSmallIcon(android.R.drawable.stat_notify_more)
@@ -80,12 +82,9 @@ public class PollService extends IntentService {
                     .setAutoCancel(true)
                     .build();
 
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            notificationManager.notify(111111, notification);
-            Log.i(TAG, "已经成功开启通知");
+           showBackgroundNotification(0, notification);
         }
-
-        QueryPreferences.setfLastResultId(this, resultId);
+        QueryPreferences.setLastResultId(this, resultId);
     }
 
     private boolean isNetworkAvailableAndConnected() {
@@ -94,6 +93,15 @@ public class PollService extends IntentService {
         boolean isNetworkConnected = isNetworkAvailable && cm.getActiveNetworkInfo().isConnected();
         return isNetworkConnected;
     }
+
+    private void showBackgroundNotification(int requestCode, Notification notification) {
+        Intent i = new Intent(ACTION_SHOW_NOTIFICATION);
+        i.putExtra(REQUEST_CODE, requestCode);
+        i.putExtra(NOTIFICATION, notification);
+        sendOrderedBroadcast(i, PERM_PRIVATE, null, null,
+                Activity.RESULT_OK, null, null);
+    }
+
 
     public static void setServiceAlarm(Context context, boolean isOn) {
         Intent i = PollService.newIntent(context);
@@ -111,6 +119,7 @@ public class PollService extends IntentService {
             alarmManager.cancel(pi);
             pi.cancel();
         }
+        QueryPreferences.setAlarmOn(context, isOn);
     }
 
 

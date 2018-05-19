@@ -1,6 +1,7 @@
 package com.example.jingj.photogallery;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -29,6 +30,8 @@ public class PollServiceHigh extends JobService {
     private PollTask mCurrentTask;
     final static int JOB_ID = 12345;
     private static final String TAG = "PollServiceHigh";
+    public static final String ACTION_SHOW_NOTIFICATION = "com.jingj.android.photogallery.SHOW_NOTIFICATION";
+
 
     @Override
     public boolean onStartJob(JobParameters params) {
@@ -92,7 +95,8 @@ public class PollServiceHigh extends JobService {
 
             //Android8.0之后要添加NotificationChannel
             final NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            NotificationChannel channel = new NotificationChannel("test", "test", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel(
+                    "test", "test", NotificationManager.IMPORTANCE_HIGH);
             manager.createNotificationChannel(channel);
 
             Notification notification = new NotificationCompat.Builder(this, "test")
@@ -107,9 +111,9 @@ public class PollServiceHigh extends JobService {
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.notify(111111, notification);
             Log.i(TAG, "已经成功开启通知");
+            sendBroadcast(new Intent(ACTION_SHOW_NOTIFICATION));
         }
-
-        QueryPreferences.setfLastResultId(this, resultId);
+        QueryPreferences.setLastResultId(this, resultId);
     }
 
     private boolean isNetworkAvailableAndConnected() {
@@ -133,9 +137,9 @@ public class PollServiceHigh extends JobService {
     }
 
     //新建JobInfo并运行Service
-    public static void startService(Context context) {
+    public static void startService(Context context, boolean isOn) {
 
-        boolean should_create = !isScheduled(context);
+        boolean should_create = !isOn;
         if (should_create) {
             JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
 
@@ -153,5 +157,6 @@ public class PollServiceHigh extends JobService {
             scheduler.cancel(JOB_ID);
             Log.i(TAG, "取消定时器设置");
         }
+        QueryPreferences.setAlarmOn(context, isOn);
     }
 }

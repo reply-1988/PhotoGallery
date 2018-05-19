@@ -36,7 +36,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PhotoGalleryFragment extends Fragment {
+public class PhotoGalleryFragment extends VisibleFragment {
 
     private static final String TAG = "PhotoGalleryFragment";
 
@@ -176,7 +176,8 @@ public class PhotoGalleryFragment extends Fragment {
                     getActivity().invalidateOptionsMenu();
                     return true;
                 } else {
-                    PollServiceHigh.startService(getActivity());
+                    boolean shouldStartAlarm = !PollServiceHigh.isScheduled(getActivity());
+                    PollServiceHigh.startService(getActivity(), shouldStartAlarm);
                     Log.i(TAG, "使用jobSchedule");
                     getActivity().invalidateOptionsMenu();
                     return true;
