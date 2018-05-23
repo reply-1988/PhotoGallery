@@ -1,5 +1,7 @@
 package com.example.jingj.photogallery;
 
+import android.net.Uri;
+
 import com.google.gson.annotations.SerializedName;
 
 public class GalleryItem {
@@ -14,6 +16,24 @@ public class GalleryItem {
     @SerializedName("url_s")
     private String mUrl;
 
+    @SerializedName("owner")
+    private String mOwner;
+
+    public String getmOwner() {
+        return mOwner;
+    }
+
+    public void setmOwner(String mOwner) {
+        this.mOwner = mOwner;
+    }
+
+    public Uri getPhotoPageUri() {
+        return Uri.parse("http://www.flickr.com/photos/")
+                .buildUpon()
+                .appendPath(mOwner)
+                .appendPath(mID)
+                .build();
+    }
     public String getmCaption() {
         return mCaption;
     }

@@ -29,6 +29,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -228,6 +229,7 @@ public class PhotoGalleryFragment extends VisibleFragment {
         @Override
         public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
+            holder.bindGalleryItem(galleryItem);
 //            Drawable placeholder = getResources().getDrawable(R.drawable.bill_up_close);
 //            holder.bindDrawable(placeholder);
             mThumbnailDownload.queueThumbnail(holder, galleryItem.getmUrl());
@@ -239,17 +241,29 @@ public class PhotoGalleryFragment extends VisibleFragment {
         }
     }
 
-    private class PhotoHolder extends RecyclerView.ViewHolder {
+    private class PhotoHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
 
         private ImageView mItemImageView;
+        private GalleryItem mGalleryItem;
+
         public PhotoHolder(View itemView) {
             super(itemView);
-
             mItemImageView = (ImageView) itemView;
+            itemView.setOnClickListener(this);
         }
 
         public void bindDrawable(Drawable drawable) {
             mItemImageView.setImageDrawable(drawable);
+        }
+
+        public void bindGalleryItem(GalleryItem galleryItem) {
+            mGalleryItem = galleryItem;
+        }
+
+        @Override
+        public void onClick(View v) {
+            Intent i = PhotoPageActivity.newIntent(getActivity(), mGalleryItem.getPhotoPageUri());
+            startActivity(i);
         }
     }
 
